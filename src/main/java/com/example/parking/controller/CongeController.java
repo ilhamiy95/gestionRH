@@ -2,159 +2,142 @@ package com.example.parking.controller;
 
 
 import com.example.parking.dao.CongeDao;
-import com.example.parking.dao.PersonnelDao;
+import com.example.parking.dao.PersonnelRepository;
 import com.example.parking.dao.RoleRepository;
-import com.example.parking.dao.UserRepository;
-import com.example.parking.model.*;
+import com.example.parking.helper.EmailSender;
+import com.example.parking.helper.PaiementManagement;
+import com.example.parking.model.Conge;
+import com.example.parking.model.StatusConge;
+import com.example.parking.model.TypeConge;
+import com.example.parking.validator.CongeValidator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import javax.mail.MessagingException;
+import java.security.Principal;
+import java.text.SimpleDateFormat;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping(value="/conge")
+@RequestMapping(value = "/conge")
 public class CongeController {
+    private final String CONGE_REFUSE_MSG = "<p>Bonjour %s,</p> <p>Votre congé du %s à %s a été refusé.</p><p>Merci.</p>";
+    private final String CONGE_REFUSE_SBJ = "Congé refusé";
+    private final String CONGE_CREE_MSG = "<p>Bonjour %s,</p> <p>Votre congé du %s à %s a été bien créé.</p><p>Merci.</p>";
+    private final String CONGE_CREE_SBJ = "Congé créé";
+    private final String CONGE_ENCOURS_MSG = "<p>Bonjour %s,</p> <p>Votre congé du %s à %s a été bien modifié.</p> <p>Il est en cours de validation.</p><p>Merci.</p>";
+    private final String CONGE_ENCOURS_SBJ = "Congé en cours de validation";
+    private final String CONGE_ACCEPTE_MSG = "<p>Bonjour %s,</p> <p>Votre congé du %s à %s a été accepté.</p> <p>Merci.</p>";
+    private final String CONGE_ACCEPTE_SBJ = "Congé validé";
+    private final String pattern = "dd-MM-yyyy";
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+
     @Autowired
     CongeDao congeDao;
-
     @Autowired
-    private UserRepository userRepository;
-
+    private PersonnelRepository personnelRepository;
     @Autowired
     private RoleRepository roleRepository;
-
+    @Autowired
+    private EmailSender emailSender;
+    @Autowired
+    private CongeValidator congeValidator;
+    @Autowired
+    private PaiementManagement paiementManagement;
 
     @GetMapping(value = "/ajouter")
-    public String ajouterConge(Model model) {
-        Conge c1 = new Conge();
+    public String ajouterConge(Model model, Principal principal) {
+        model.addAttribute("congee", new Conge());
+        model.addAttribute("soldeConge", personnelRepository.findByUsername(principal.getName()).getSoldeConge());
+        model.addAttribute("typesConge", TypeConge.getValues());
+        return "ajouter_conge";
+    }
 
-        model.addAttribute("congee", c1);
-        model.addAttribute("typesConge" , TypeConge.getValues());
-        model.addAttribute("info", "code java");
-        List<User> users = userRepository.findAll();
-        Map<Long, String> u = new HashMap<>();
-        for (User user : users) {
-            u.put(user.getId(), user.getUsername());
+    @PostMapping(value = "/ajouter")
+    public String saveConge(Model model, @ModelAttribute("congee") Conge conge, BindingResult bindingResult, Principal principal) throws MessagingException {
+        conge.setPersonnel(personnelRepository.findByUsername(principal.getName()));
+        congeValidator.validate(conge, bindingResult);
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("typesConge", TypeConge.getValues());
+            model.addAttribute("soldeConge", personnelRepository.findByUsername(principal.getName()).getSoldeConge());
+            return "ajouter_conge";
         }
-        model.addAttribute("users", u);
-        return "conge";
+        conge.setStatus(StatusConge.EN_COURS);
+        congeDao.save(conge);
+        emailSender.sendEmailWithAttachment(String.format(CONGE_CREE_MSG, conge.getPersonnel().getUsername(),
+                simpleDateFormat.format(conge.getDateDebut()),
+                simpleDateFormat.format(conge.getDateFin())), conge.getPersonnel().getEmail(), CONGE_CREE_SBJ);
+        return "redirect:/conge/allc";
     }
 
     @GetMapping(value = "/modifier/{id}")
-    public String ajouterConge(Model model, @PathVariable Integer id) {
+    public String ajouterConge(Model model, @PathVariable Integer id, Principal principal) {
         Conge c1 = congeDao.getById(id);
-
         model.addAttribute("congee", c1);
-        model.addAttribute("info", "3amer");
-
-        List<User> users = userRepository.findAll();
-        Map<Long, String> u = new HashMap<>();
-        for (User user : users) {
-            u.put(user.getId(), user.getUsername());
-        }
-        model.addAttribute("users", u);
-
-        return "conge";
+        model.addAttribute("soldeConge", personnelRepository.findByUsername(principal.getName()).getSoldeConge());
+        return "modifier_conge";
     }
 
-    @PostMapping(value = "/sauvegarder")
-    public String saveConge(Model model, @ModelAttribute Conge conge) {
+    @PostMapping(value = "/modifier/{id}")
+    public String modifc(Model model, @PathVariable Integer id, @ModelAttribute("congee") Conge conge, BindingResult bindingResult, Principal principal) throws MessagingException {
+        conge.setPersonnel(personnelRepository.findByUsername(principal.getName()));
+        congeValidator.validate(conge, bindingResult);
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("typesConge", TypeConge.getValues());
+            return "mofidier_conge";
+        }
+        conge.setId(id);
         conge.setStatus(StatusConge.EN_COURS);
         congeDao.save(conge);
-        model.addAttribute("info", "code java");
-        return allconge(model);
+        emailSender.sendEmailWithAttachment(String.format(CONGE_ENCOURS_MSG, conge.getPersonnel().getUsername(),
+                simpleDateFormat.format(conge.getDateDebut()),
+                simpleDateFormat.format(conge.getDateFin())), conge.getPersonnel().getEmail(), CONGE_ENCOURS_SBJ);
+        return "redirect:/conge/allc";
     }
 
     @GetMapping(value = "/allc")
-    public String allconge(Model model) { // model pour passer des donnees
+    public String allconge(Authentication auth, Model model) {
         List<Conge> all = congeDao.findAll();
-
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_USER"))) {
+            all = all.stream().filter(c -> c.getPersonnel().getUsername().equals(auth.getName())).collect(Collectors.toList());
+        }
         model.addAttribute("conges", all);
-        model.addAttribute("info", "base de données");
-
         return "conge-list";
     }
 
     @GetMapping(value = "/accepter/{id}")
-    public String accepter(@PathVariable Integer id) { // model pour passer des donnees
-        Conge conge = congeDao.getById(id); 
-        conge.setStatus(StatusConge.ACCEPTE);
-        congeDao.save(conge);
+    public String accepter(@PathVariable Integer id) throws MessagingException {
+        Conge conge = congeDao.getById(id);
+        if (conge.getStatus() != StatusConge.ACCEPTE) {
+            conge.setStatus(StatusConge.ACCEPTE);
+            congeDao.save(conge);
+            emailSender.sendEmailWithAttachment(String.format(CONGE_ACCEPTE_MSG, conge.getPersonnel().getUsername(),
+                    simpleDateFormat.format(conge.getDateDebut()),
+                    simpleDateFormat.format(conge.getDateFin())), conge.getPersonnel().getEmail(), CONGE_ACCEPTE_SBJ);
+            if (TypeConge.SANS_SOLDE.equals(conge.getType())) {
+                paiementManagement.soustractSalaryByConge(conge);
+            } else if (TypeConge.PAYE.equals(conge.getType())) {
+                paiementManagement.soustractSoldeConge(conge);
+            }
+        }
         return "redirect:/conge/allc";
     }
 
     @GetMapping(value = "/refuser/{id}")
-    public String allconge(@PathVariable Integer id) { // model pour passer des donnees
+    public String allconge(@PathVariable Integer id) throws MessagingException {
         Conge conge = congeDao.getById(id);
-        conge.setStatus(StatusConge.REFUSE);
-        congeDao.save(conge);
+        if (conge.getStatus() != StatusConge.REFUSE) {
+            conge.setStatus(StatusConge.REFUSE);
+            congeDao.save(conge);
+            emailSender.sendEmailWithAttachment(String.format(CONGE_REFUSE_MSG, conge.getPersonnel().getUsername(),
+                    simpleDateFormat.format(conge.getDateDebut()),
+                    simpleDateFormat.format(conge.getDateFin())), conge.getPersonnel().getEmail(), CONGE_REFUSE_SBJ);
+        }
         return "redirect:/conge/allc";
     }
-
-    @GetMapping(value = "/byuser")
-    public String congeByUser(Model model) { // model pour passer des donnees
-        List<Conge> all = congeDao.findAll();
-
-        model.addAttribute("cn", all);
-        model.addAttribute("info", "base de données");
-
-        return "conge-list";
-    }
-
-    @GetMapping(value = "/test")
-    public String test(Model model) {
-
-        //List<Conge> conges=congeDao.findAll();
-
-        User  user =new User();
-        user.setAge(26);
-        user.setImmat(26);
-        user.setEchelle("chef");
-
-        userRepository.save(user);
-
-        Conge conge1=new Conge();
-        Conge conge2=new Conge();
-
-        conge1.setDateDebut(new Date());
-        conge1.setDateFin(new Date());
-
-        conge2.setDateDebut(new Date());
-        conge2.setDateFin(new Date());
-
-        conge1.setUser(user);
-        conge2.setUser(user);
-
-        congeDao.save(conge1);
-        congeDao.save(conge2);
-
-
-
-        return ajouterConge(model);
-    }
-
-    @GetMapping(value = "/test2")
-    public String test2(Model model) {
-
-        Role role=new Role();
-        role.setName("controlleur");
-
-        roleRepository.save(role);
-
-        User  user =new User();
-        user.setAge(26);
-        user.setImmat(26);
-        user.setEchelle("chef");
-        user.setRole(role);  //Role role
-
-        userRepository.save(user);
-
-        return ajouterConge(model);
-    }
-
-
-
-
 }

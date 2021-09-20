@@ -13,7 +13,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
     <link href="img/logo/logo.png" rel="icon">
-    <title>Gestion des congés</title>
+    <title>Gestion des absences</title>
     <%@include file="links.tag" %>
 </head>
 <body id="page-top">
@@ -33,49 +33,36 @@
                         <!-- Simple Tables -->
                         <div class="card">
                             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                <h6 class="m-0 font-weight-bold text-primary">Congés</h6>
+                                <h6 class="m-0 font-weight-bold text-primary">liste des absences</h6>
                             </div>
                             <div class="table-responsive">
                                 <table class="table align-items-center table-flush">
                                     <thead class="thead-light">
                                     <tr>
-                                        <th>Congé ID</th>
-                                        <th>Date de début</th>
-                                        <th>Date de fin</th>
-                                        <th>Type</th>
-                                        <th>Employée</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
+                                        <th>Nom de l'employée</th>
+                                        <th>prénom de l'employée</th>
+                                        <th>Nombre de jour d'absence</th>
+                                        <th>De</th>
+                                        <th>à</th>
+                                        <sec:authorize access="hasRole('ADMIN')">
+                                            <th>ACTION</th>
+                                        </sec:authorize>
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    <c:forEach items="${conges}" var="conge">
+                                    <c:forEach items="${ab}" var="absence">
                                         <tr>
-                                            <td>${conge.id}</td>
-                                            <td><fmt:formatDate value="${conge.dateDebut}" pattern="dd-MM-yyyy"/></td>
-                                            <td><fmt:formatDate value="${conge.dateFin}" pattern="dd-MM-yyyy"/></td>
-                                            <td>${conge.type}</td>
-                                            <td>${conge.personnel.username}</td>
-                                            <td><span
-                                                    class="badge badge-${conge.status == 'ACCEPTE' ? 'success' : (conge.status == 'REFUSE' ? 'danger' : 'warning')}">${conge.status}</span>
-                                            </td>
+                                            <td>${absence.personnel.username}</td>
+                                            <td>${absence.personnel.username}</td>
+                                            <td>${absence.nombreJour}</td>
+                                            <td><fmt:formatDate value="${absence.dateDebut}" pattern="dd-MM-yyyy"/></td>
+                                            <td><fmt:formatDate value="${absence.dateFin}" pattern="dd-MM-yyyy"/></td>
                                             <sec:authorize access="hasRole('ADMIN')">
                                                 <td>
-                                                    <c:if test="${conge.status == 'EN_COURS'}">
-                                                        <a href="/conge/accepter/${conge.id}"
-                                                           class="btn btn-sm btn-success">Accepter</a>
-                                                        <a href="/conge/refuser/${conge.id}"
-                                                           class="btn btn-sm btn-danger">Refuser</a>
-                                                    </c:if>
-                                                </td>
-                                            </sec:authorize>
-
-                                            <sec:authorize access="hasRole('USER')">
-                                                <td>
-                                                    <c:if test="${conge.status == 'EN_COURS'}">
-                                                        <a href="/conge/modifier/${conge.id}"
-                                                           class="btn btn-sm btn-primary">Modifier</a>
-                                                    </c:if>
+                                                    <a href="/absence/suppression/${absence.id}"
+                                                       class="btn btn-sm btn-success">Supprimer</a>
+                                                    <a href="/absence/modifier/${absence.id}"
+                                                       class="btn btn-sm btn-primary">Modifier</a>
                                                 </td>
                                             </sec:authorize>
                                         </tr>
@@ -86,7 +73,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
             <!---Container Fluid-->
         </div>
@@ -101,7 +87,5 @@
     <i class="fas fa-angle-up"></i>
 </a>
 <%@include file="script.tag" %>
-
 </body>
-
 </html>

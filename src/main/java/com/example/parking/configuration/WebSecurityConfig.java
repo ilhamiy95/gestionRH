@@ -27,21 +27,27 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-            .authorizeRequests()
-              //  .antMatchers("/personnel/**").hasRole("ADMIN")
-               // .antMatchers("/conge/allc").authenticated()
-               // .antMatchers("/welcome").authenticated()
-               // .antMatchers("/conge/**").hasRole("USER")
-
-                .antMatchers("/resources/**", "/registration").permitAll()
-                //.anyRequest().authenticated()
+                .authorizeRequests()
+                .antMatchers("/absence/allab").authenticated()
+                .antMatchers("/absence/**").hasRole("ADMIN")
+                .antMatchers("/conge/allc").authenticated()
+                .antMatchers("/conge/accepter/**").hasRole("ADMIN")
+                .antMatchers("/conge/refuser/**").hasRole("ADMIN")
+                .antMatchers("/conge/**").hasRole("USER")
+                .antMatchers("/candidat/new", "/candidat/create").anonymous()
+                .antMatchers("/candidat/**").hasRole("ADMIN")
+                .antMatchers("/personnel/afficher").hasRole("USER")
+                .antMatchers("/personnel/**").hasRole("ADMIN")
+                .antMatchers("/users/**").hasRole("ADMIN")
+                .antMatchers("/", "/welcome").permitAll()
+                .antMatchers("/resources/**").permitAll()
                 .anyRequest().permitAll()
                 .and()
-            .formLogin()
+                .formLogin()
                 .loginPage("/login")
                 .permitAll()
                 .and()
-            .logout()
+                .logout()
                 .permitAll();
     }
 

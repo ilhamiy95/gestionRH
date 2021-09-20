@@ -11,7 +11,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 @Service
-public class SecurityServiceImpl implements SecurityService{
+public class SecurityServiceImpl implements SecurityService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -24,7 +24,7 @@ public class SecurityServiceImpl implements SecurityService{
     public String findLoggedInUsername() {
         Object userDetails = SecurityContextHolder.getContext().getAuthentication().getDetails();
         if (userDetails instanceof UserDetails) {
-            return ((UserDetails)userDetails).getUsername();
+            return ((UserDetails) userDetails).getUsername();
         }
 
         return null;

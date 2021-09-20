@@ -7,26 +7,20 @@ import org.springframework.format.annotation.DateTimeFormat;
 import javax.persistence.*;
 import java.util.Date;
 
-//@Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-public class Conge {
+public class Absence {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int id;
-
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private Date dateDebut;
-
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private Date dateFin;
-
-    private TypeConge type;
-    private StatusConge status;
-
     @ManyToOne
     private Personnel personnel;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private Date dateDebut;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private Date dateFin;
+    private int nombreJour;
 
     public int getId() {
         return id;
@@ -34,6 +28,14 @@ public class Conge {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public Personnel getPersonnel() {
+        return personnel;
+    }
+
+    public void setPersonnel(Personnel personnel) {
+        this.personnel = personnel;
     }
 
     public Date getDateDebut() {
@@ -52,27 +54,11 @@ public class Conge {
         this.dateFin = dateFin;
     }
 
-    public TypeConge getType() {
-        return type;
+    public int getNombreJour() {
+        return nombreJour;
     }
 
-    public void setType(TypeConge type) {
-        this.type = type;
-    }
-
-    public StatusConge getStatus() {
-        return status;
-    }
-
-    public void setStatus(StatusConge status) {
-        this.status = status;
-    }
-
-    public Personnel getPersonnel() {
-        return personnel;
-    }
-
-    public void setPersonnel(Personnel personnel) {
-        this.personnel = personnel;
+    public void setNombreJour(int nombreJour) {
+        this.nombreJour = nombreJour;
     }
 }

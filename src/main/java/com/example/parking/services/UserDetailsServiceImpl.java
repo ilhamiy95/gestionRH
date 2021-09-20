@@ -1,9 +1,8 @@
 package com.example.parking.services;
 
+import com.example.parking.dao.PersonnelRepository;
 import com.example.parking.dao.UserRepository;
-import com.example.parking.model.Role;
 import com.example.parking.model.User;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,17 +19,21 @@ import java.util.Set;
 public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private PersonnelRepository personnelRepository;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) {
         User user = userRepository.findByUsername(username);
+        if (user == null) {
+            user = personnelRepository.findByUsername(username);
+        }
         if (user == null) throw new UsernameNotFoundException(username);
 
         Set<GrantedAuthority> grantedAuthorities = new HashSet<>();
 
         grantedAuthorities.add(new SimpleGrantedAuthority(user.getRole().getName()));
-
 
         return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(), grantedAuthorities);
     }
